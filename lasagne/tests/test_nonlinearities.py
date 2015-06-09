@@ -9,12 +9,15 @@ class TestNonlinearities(object):
 
     def rectify(self, x):
         return x * (x > 0)
-
+    
     def leaky_rectify(self, x):
         return x * (x > 0) + 0.01 * x * (x < 0)
 
     def leaky_rectify_0(self, x):
         return self.rectify(x)
+
+    def truncated_rectify(self, x):
+        return x * (x > 1)
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -29,7 +32,7 @@ class TestNonlinearities(object):
                              ['linear', 'rectify',
                               'leaky_rectify', 'sigmoid',
                               'tanh', 'softmax',
-                              'leaky_rectify_0'])
+                              'leaky_rectify_0', 'truncated_rectify'])
     def test_nonlinearity(self, nonlinearity):
         import lasagne.nonlinearities
 
@@ -46,5 +49,8 @@ class TestNonlinearities(object):
 
         theano_result = theano_nonlinearity(X).eval({X: X0})
         np_result = np_nonlinearity(X0)
-
+        '''print theano_result
+        print np_result
+        print np.allclose(theano_result, np_result)
+        raise NameError('%s' % np.allclose(theano_result, np_result))'''
         assert np.allclose(theano_result, np_result)

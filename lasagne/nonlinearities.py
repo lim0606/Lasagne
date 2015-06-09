@@ -3,7 +3,7 @@ Non-linear activation functions for artificial neurons.
 """
 
 import theano.tensor.nnet
-
+import theano
 
 # sigmoid
 def sigmoid(x):
@@ -164,6 +164,34 @@ very_leaky_rectify.__doc__ = """very_leaky_rectify(x)
 
      Instance of :class:`LeakyRectify` with leakiness :math:`\\alpha=1/3`
      """
+
+
+# truncated rectify http://arxiv.org/pdf/1402.3337.pdf
+class TruncatedRectify(object):
+    """Rectify activation function :math:`\\varphi(x) = \\x * (x > 1)`
+
+    Parameters
+    ----------
+    x : float32
+        The activation (the summed, weighted input of a neuron).
+
+    Returns
+    -------
+    float32
+        The output of the rectify function applied to the activation.
+    """
+    # tensor expression x * (x > 1) provide inappropriate grad value
+    def __init__(self, trunc=1.0):
+        self.trunc = trunc
+
+    def __call__(self, x):
+        return 0.5 * (x * theano.tensor.sgn(x-self.trunc) + x)
+
+truncated_rectify = TruncatedRectify()
+truncated_rectify.__doc__ = """truncated_rectify(x)
+
+    Instance of :class:`TruncatedRectify` with trunc :math:`\\trunc=1.0`
+    """
 
 
 # linear
