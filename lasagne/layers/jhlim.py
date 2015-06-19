@@ -59,7 +59,7 @@ class BNLayer(Layer):
 
         # get output shape of incoming
         #self.n_channels = self.input_shape[1]
-        print self.input_shape
+        #print self.input_shape
         #raise NameError("Hi")
  
         self.epsilon = epsilon
