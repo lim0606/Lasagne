@@ -8,6 +8,7 @@ from .. import nonlinearities
 from .base import Layer
 
 from .conv import conv_output_length
+from .pool import pool_output_length
 from ..utils import as_tuple
 
 from theano.sandbox.cuda.basic_ops import gpu_contiguous
@@ -99,10 +100,10 @@ class Conv2DCCLayer(CCLayer):
         An initializer for the weights of the layer. This should initialize the
         layer weights to a 4D array with shape
         ``(num_filters, num_input_channels, filter_rows, filter_columns)``.
-         If automatic dimshuffling is disabled (see notes), the shape should be
+        If automatic dimshuffling is disabled (see notes), the shape should be
         ``(num_input_channels, input_rows, input_columns, num_filters)``
-        instead (c01b axis order).
-        See :func:`lasagne.utils.create_param` for more information.
+        instead (c01b axis order). See :func:`lasagne.utils.create_param` for
+        more information.
 
     b : Theano shared variable, numpy array, callable or None
         An initializer for the biases of the layer. If None is provided, the
@@ -506,10 +507,18 @@ class MaxPool2DCCLayer(CCLayer):
             num_input_channels = input_shape[0]
             input_rows, input_columns = input_shape[1:3]
 
-        output_rows = int(np.ceil(float(input_rows - self.pool_size +
-                                        self.stride) / self.stride))
-        output_columns = int(np.ceil(float(input_columns - self.pool_size +
-                                           self.stride) / self.stride))
+        output_rows = pool_output_length(input_rows,
+                                         pool_size=self.pool_size,
+                                         stride=self.stride,
+                                         ignore_border=False,
+                                         pad=0,
+                                         )
+        output_columns = pool_output_length(input_columns,
+                                            pool_size=self.pool_size,
+                                            stride=self.stride,
+                                            ignore_border=False,
+                                            pad=0,
+                                            )
 
         if self.dimshuffle:
             return (batch_size, num_input_channels, output_rows,

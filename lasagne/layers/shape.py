@@ -21,17 +21,35 @@ __all__ = [
 
 class FlattenLayer(Layer):
     """
-    Flatten all but the first dimension.
+    A layer that flattens its input. The leading ``outdim-1`` dimensions of
+    the output will have the same shape as the input. The remaining dimensions
+    are collapsed into the last dimension.
+
+    Parameters
+    ----------
+    incoming : a :class:`Layer` instance or a tuple
+        The layer feeding into this layer, or the expected input shape.
+    outdim : int
+        The number of dimensions in the output.
 
     See Also
     --------
     flatten  : Shortcut
     """
+    def __init__(self, incoming, outdim=2, **kwargs):
+        super(FlattenLayer, self).__init__(incoming, **kwargs)
+        self.outdim = outdim
+
+        if outdim < 1:
+            raise ValueError('Dim must be >0, was %i', outdim)
+
     def get_output_shape_for(self, input_shape):
-        return (input_shape[0], int(np.prod(input_shape[1:])))
+        shp = [input_shape[i] for i in range(self.outdim-1)]
+        shp += [int(np.prod(input_shape[(self.outdim-1):]))]
+        return tuple(shp)
 
     def get_output_for(self, input, **kwargs):
-        return input.flatten(2)
+        return input.flatten(self.outdim)
 
 flatten = FlattenLayer  # shortcut
 
@@ -55,6 +73,7 @@ class ReshapeLayer(Layer):
         * ``-1``, denoting to infer the size for this dimension to match
           the total number of elements in the input tensor (cannot be used
           more than once in a specification)
+        * TensorVariable directly giving the size of the dimension
 
     Examples
     --------
@@ -88,6 +107,11 @@ class ReshapeLayer(Layer):
                 if len(s) != 1 or not isinstance(s[0], int) or s[0] < 0:
                     raise ValueError("`shape` input references must be "
                                      "single-element lists of int >= 0")
+            elif isinstance(s, T.TensorVariable):
+                if s.ndim != 0:
+                    raise ValueError(
+                        "A symbolic variable in a shape specification must be "
+                        "a scalar, but had %i dimensions" % s.ndim)
             else:
                 raise ValueError("`shape` must be a tuple of int and/or [int]")
         if sum(s == -1 for s in shape) > 1:
@@ -119,6 +143,12 @@ class ReshapeLayer(Layer):
                         # it is unknown.
                         masked_input_shape[o[0]] = 1
                         masked_output_shape[dim] = 1
+        # Secondly, replace all symbolic shapes with `None`, as we cannot
+        # infer their size here.
+        for dim, o in enumerate(output_shape):
+            if isinstance(o, T.TensorVariable):
+                output_shape[dim] = None
+                masked_output_shape[dim] = None
         # From the shapes, compute the sizes of the input and output tensor
         input_size = (None if any(x is None for x in masked_input_shape)
                       else np.prod(masked_input_shape))
@@ -190,10 +220,6 @@ class DimshuffleLayer(Layer):
     >>> l2 = DimshuffleLayer(l1, (4, 2, 1, 0))
     >>> l2.output_shape
     (2, 3, 5, 7)
-
-    See Also
-    --------
-    dimshuffle : Shortcut
     """
     def __init__(self, incoming, pattern, **kwargs):
         super(DimshuffleLayer, self).__init__(incoming, **kwargs)
@@ -274,10 +300,6 @@ class PadLayer(Layer):
         Dimensions up to this value are not padded. For padding convolutional
         layers this should be set to 2 so the sample and filter dimensions are
         not padded
-
-    See Also
-    --------
-    pad : Shortcut
     """
     def __init__(self, incoming, width, val=0, batch_ndim=2, **kwargs):
         super(PadLayer, self).__init__(incoming, **kwargs)
@@ -346,7 +368,7 @@ class SliceLayer(Layer):
                 range(*self.slice.indices(input_shape[self.axis])))
         return tuple(output_shape)
 
-    def get_output_for(self, input):
+    def get_output_for(self, input, **kwargs):
         axis = self.axis
         if axis < 0:
             axis += input.ndim

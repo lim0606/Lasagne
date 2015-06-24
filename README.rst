@@ -4,6 +4,12 @@
 .. image:: https://travis-ci.org/Lasagne/Lasagne.svg?branch=master
     :target: https://travis-ci.org/Lasagne/Lasagne
 
+.. image:: https://img.shields.io/coveralls/Lasagne/Lasagne.svg
+    :target: https://coveralls.io/r/Lasagne/Lasagne
+
+.. image:: https://img.shields.io/github/license/Lasagne/Lasagne.svg
+    :target: https://github.com/Lasagne/Lasagne/blob/master/LICENSE
+
 Lasagne
 =======
 
