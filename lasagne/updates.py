@@ -537,9 +537,9 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
         The variables to generate update expressions for
     learning_rate : float
         Learning rate
-    beta_1 : float
+    beta1 : float
         Exponential decay rate for the first moment estimates.
-    beta_2 : float
+    beta2 : float
         Exponential decay rate for the second moment estimates.
     epsilon : float
         Constant for numerical stability.
@@ -565,13 +565,18 @@ def adam(loss_or_grads, params, learning_rate=0.001, beta1=0.9,
     t_prev = theano.shared(utils.floatX(0.))
     updates = OrderedDict()
 
+    t = t_prev + 1
+    a_t = learning_rate*T.sqrt(1-beta2**t)/(1-beta1**t)
+
     for param, g_t in zip(params, all_grads):
-        m_prev = theano.shared(param.get_value() * 0.)
-        v_prev = theano.shared(param.get_value() * 0.)
-        t = t_prev + 1
+        value = param.get_value(borrow=True)
+        m_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                               broadcastable=param.broadcastable)
+        v_prev = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                               broadcastable=param.broadcastable)
+
         m_t = beta1*m_prev + (1-beta1)*g_t
         v_t = beta2*v_prev + (1-beta2)*g_t**2
-        a_t = learning_rate*T.sqrt(1-beta2**t)/(1-beta1**t)
         step = a_t*m_t/(T.sqrt(v_t) + epsilon)
 
         updates[m_prev] = m_t
@@ -676,7 +681,7 @@ def total_norm_constraint(tensor_vars, max_norm, epsilon=1e-7,
     ----------
     tensor_vars : List of TensorVariables.
         Tensors to be rescaled.
-    threshold : float
+    max_norm : float
         Threshold value for total norm.
     epsilon : scalar, optional
         Value used to prevent numerical instability when dividing by
